@@ -172,11 +172,3 @@ The tabs along the top are the different parts of the business.
 | Window text looks tiny or cut off | Maximise the window; the layout is made for roughly 1300x800 or larger |
 
 ---
-
-## For the project report (database concepts used)
-
-- **Design:** 12 tables in a normalised design with primary keys, foreign keys, NOT NULL, UNIQUE and CHECK constraints, and a many-to-many relationship (perfume <-> raw_material).
-- **SQL:** SELECT with WHERE and ORDER BY, aggregates (COUNT, SUM, AVG, MIN, MAX), GROUP BY and HAVING, joins, subqueries, INSERT/UPDATE/DELETE, and views. See the **Reports** tab.
-- **Triggers:** automatic stock updates, order totals, payment status, cancellations and locked production batches.
-- **Transactions:** a new order and all its items are saved together or not at all.
-- **Application:** Python Tkinter interface talking to PostgreSQL through `psycopg2`.
