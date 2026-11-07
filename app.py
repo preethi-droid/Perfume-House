@@ -22,8 +22,12 @@ try:
 except ImportError:
     sys.exit("psycopg2 is missing.  Install it with:  pip install psycopg2-binary")
 
-APP_TITLE = "Perfume & Fragrance House Management System"
-PLUM, GOLD, CREAM = "#4a2545", "#c9a24d", "#faf6ef"
+APP_TITLE = "Aroma House - Perfume & Fragrance Management"
+# wine / rose / cream
+INK, PLUM, GOLD = "#2d2326", "#7b2d4e", "#d9a7b4"
+CREAM, BLUSH, ROSE, MUTED, SIDE = "#fdf7f2", "#f5e6e6", "#ecc6d0", "#7a6a6e", "#4d1a31"
+SANS = "Segoe UI"
+SERIF = "Georgia"
 
 
 # =====================================================================
@@ -108,19 +112,28 @@ def setup_style(root):
     s = ttk.Style(root)
     s.theme_use("clam")
     root.configure(bg=CREAM)
-    s.configure(".", background=CREAM, font=("Segoe UI", 10))
+    edge = "#e3cdd3"                                   # soft rose-grey used for all borders
+    s.configure(".", background=CREAM, foreground=INK, font=(SANS, 10), bordercolor=edge,
+                lightcolor=CREAM, darkcolor=CREAM, troughcolor=BLUSH)
     s.configure("TFrame", background=CREAM)
     s.configure("TLabel", background=CREAM)
-    s.configure("TLabelframe", background=CREAM)
-    s.configure("TLabelframe.Label", background=CREAM, foreground=PLUM,
-                font=("Segoe UI", 10, "bold"))
-    s.configure("TButton", padding=6, background=PLUM, foreground="white")
-    s.map("TButton", background=[("active", GOLD)], foreground=[("active", "black")])
-    s.configure("Treeview", rowheight=24, background="white", fieldbackground="white")
-    s.configure("Treeview.Heading", background=PLUM, foreground="white",
-                font=("Segoe UI", 10, "bold"))
-    s.map("Treeview", background=[("selected", GOLD)], foreground=[("selected", "black")])
-    s.configure("TNotebook.Tab", padding=(12, 6))
+    s.configure("TLabelframe", background=CREAM, bordercolor=edge)
+    s.configure("TLabelframe.Label", background=CREAM, foreground=PLUM, font=(SANS, 10, "bold"))
+    s.configure("TButton", padding=(14, 6), background=PLUM, foreground="white",
+                borderwidth=0, focusthickness=0)
+    s.map("TButton", background=[("active", "#9a3d63")])
+    s.configure("TEntry", fieldbackground="white", bordercolor=edge, padding=5)
+    s.configure("TCombobox", fieldbackground="white", bordercolor=edge, padding=5, arrowcolor=PLUM)
+    s.map("TCombobox", fieldbackground=[("readonly", "white")],
+          selectbackground=[("readonly", "white")], selectforeground=[("readonly", INK)])
+    s.configure("TSpinbox", fieldbackground="white", bordercolor=edge, padding=5)
+    s.configure("TScrollbar", background=BLUSH, bordercolor=edge, arrowcolor=PLUM)
+    s.configure("Treeview", rowheight=28, background="white", fieldbackground="white",
+                bordercolor=edge, borderwidth=1)
+    s.configure("Treeview.Heading", background=PLUM, foreground="white", font=(SANS, 10, "bold"),
+                padding=(8, 7), relief="flat")
+    s.map("Treeview.Heading", background=[("active", "#9a3d63")])
+    s.map("Treeview", background=[("selected", ROSE)], foreground=[("selected", INK)])
     s.configure("Status.TLabel", foreground="#2e7d32")
 
 
@@ -148,7 +161,7 @@ def make_tree(parent, height=8):
     hsb.grid(row=1, column=0, sticky="ew")
     frame.rowconfigure(0, weight=1)
     frame.columnconfigure(0, weight=1)
-    tree.tag_configure("odd", background="#f4ecf3")
+    tree.tag_configure("odd", background="#fcf5f5")
     tree.tag_configure("even", background="white")
     return frame, tree
 
@@ -162,6 +175,42 @@ def fill_tree(tree, cols, rows):
     for i, r in enumerate(rows):
         tree.insert("", "end", values=[fmt(v) for v in r],
                     tags=("odd" if i % 2 else "even",))
+
+
+def draw_bottle(c, cx, top, h, glass=PLUM, liquid=ROSE, line=INK):
+    """A simple flat perfume bottle. cx = centre x, top = y of the cap, h = total height."""
+    u = h / 100.0
+    c.create_rectangle(cx - 9 * u, top, cx + 9 * u, top + 20 * u, fill=line, outline="")          # cap
+    c.create_rectangle(cx - 5 * u, top + 20 * u, cx + 5 * u, top + 30 * u, fill=glass, outline=line)  # neck
+    c.create_polygon(cx - 30 * u, top + 40 * u, cx - 22 * u, top + 30 * u,                         # body
+                     cx + 22 * u, top + 30 * u, cx + 30 * u, top + 40 * u,
+                     cx + 30 * u, top + 90 * u, cx + 22 * u, top + 100 * u,
+                     cx - 22 * u, top + 100 * u, cx - 30 * u, top + 90 * u,
+                     fill=glass, outline=line, width=2)
+    c.create_polygon(cx - 26 * u, top + 56 * u, cx + 26 * u, top + 56 * u,                         # perfume
+                     cx + 26 * u, top + 88 * u, cx + 19 * u, top + 96 * u,
+                     cx - 19 * u, top + 96 * u, cx - 26 * u, top + 88 * u,
+                     fill=liquid, outline="")
+    c.create_rectangle(cx - 14 * u, top + 64 * u, cx + 14 * u, top + 80 * u, fill=CREAM, outline=line)
+
+
+class NavButton(tk.Label):
+    """Sidebar entry (a Label, so the colours also work on macOS). The active one looks like a tab."""
+
+    def __init__(self, parent, text, command):
+        super().__init__(parent, text=text, anchor="w", padx=20, pady=9, font=(SANS, 11),
+                         bg=SIDE, fg="#f6e4ea", cursor="hand2")
+        self.active = False
+        self.bind("<Button-1>", lambda _e: command())
+        self.bind("<Enter>", lambda _e: None if self.active else self.config(bg="#6a2646"))
+        self.bind("<Leave>", lambda _e: self.set_active(self.active))
+
+    def set_active(self, flag):
+        self.active = flag
+        if flag:
+            self.config(bg=CREAM, fg=PLUM, font=(SANS, 11, "bold"))
+        else:
+            self.config(bg=SIDE, fg="#f6e4ea", font=(SANS, 11))
 
 
 def fk_id(text):
@@ -407,14 +456,18 @@ class FormulaDialog(tk.Toplevel):
         super().__init__(parent)
         self.db, self.perfume_id, self.on_done = db, perfume_id, on_done
         self.title(f"Formula - {perfume_name}")
-        self.geometry("820x520")
+        self.geometry("1100x570")
         self.transient(parent)
         self.configure(bg=CREAM)
 
         ttk.Label(self, text=f"Formula of '{perfume_name}'  (ml of each material per bottle)",
-                  font=("Segoe UI", 12, "bold"), foreground=PLUM).pack(pady=(10, 4))
-        frame, self.tree = make_tree(self, height=10)
-        frame.pack(fill="both", expand=True, padx=10, pady=6)
+                  font=(SERIF, 14, "bold"), foreground=PLUM).pack(pady=(12, 4))
+        body = ttk.Frame(self)
+        body.pack(fill="both", expand=True, padx=10, pady=6)
+        self.pyramid = tk.Canvas(body, width=340, height=300, bg=CREAM, highlightthickness=0)
+        self.pyramid.pack(side="left", padx=(0, 10))
+        frame, self.tree = make_tree(body, height=10)
+        frame.pack(side="left", fill="both", expand=True)
         self.tree.bind("<<TreeviewSelect>>", self.on_select)
 
         self.summary = ttk.Label(self, text="")
@@ -446,6 +499,7 @@ class FormulaDialog(tk.Toplevel):
                 ORDER BY CASE rm.note_position WHEN 'Top' THEN 1 WHEN 'Middle' THEN 2 ELSE 3 END,
                          rm.material_name""", (self.perfume_id,))
             fill_tree(self.tree, cols, rows)
+            self.draw_pyramid(rows)
             total_ml = sum(r[4] for r in rows) if rows else Decimal(0)
             total_cost = sum(r[5] for r in rows) if rows else Decimal(0)
             size = self.db.scalar("SELECT bottle_size_ml FROM perfume WHERE perfume_id = %s",
@@ -456,6 +510,27 @@ class FormulaDialog(tk.Toplevel):
                      f"   |   Material cost per bottle: Rs {fmt(total_cost)}")
         except Exception as e:
             show_error(e)
+
+    def draw_pyramid(self, rows):
+        """Top / heart / base notes of this formula, drawn as the usual fragrance pyramid."""
+        c = self.pyramid
+        c.delete("all")
+        groups = {"Top": [], "Middle": [], "Base": []}
+        for r in rows:
+            groups[r[3]].append(r[1])
+
+        def half(y):                                   # half-width of the triangle at height y
+            return 80 * (y - 20) / 260
+
+        spec = [("Top", "Top notes", 20, 110, "#f7dde3"),
+                ("Middle", "Heart notes", 110, 200, "#e3a3b4"),
+                ("Base", "Base notes", 200, 280, "#9c4466")]
+        for key, label, y1, y2, col in spec:
+            c.create_polygon(90 - half(y1), y1, 90 + half(y1), y1, 90 + half(y2), y2, 90 - half(y2), y2,
+                             fill=col, outline=PLUM)
+            c.create_text(185, y1 + 8, anchor="nw", text=label, font=(SANS, 10, "bold"), fill=PLUM)
+            c.create_text(185, y1 + 26, anchor="nw", text=", ".join(groups[key]) or "-",
+                          width=150, font=(SANS, 9), fill=INK)
 
     def on_select(self, _e=None):
         sel = self.tree.selection()
@@ -707,6 +782,9 @@ class OrdersTab(ttk.Frame):
         frame, self.tree = make_tree(self, height=10)
         frame.pack(fill="both", expand=True, pady=8)
         self.tree.bind("<<TreeviewSelect>>", self.show_details)
+        for tag, bg, fg in [("pending", "#fff1d6", INK), ("paid", "#e4f1e6", INK),
+                            ("shipped", "#ece2f3", INK), ("cancelled", "#efefef", "#999999")]:
+            self.tree.tag_configure(tag, background=bg, foreground=fg)
 
         lower = ttk.Frame(self)
         lower.pack(fill="both", expand=True)
@@ -726,6 +804,9 @@ class OrdersTab(ttk.Frame):
         try:
             cols, rows = self.db.fetch("SELECT * FROM v_order_summary ORDER BY order_id DESC")
             fill_tree(self.tree, cols, rows)
+            for iid in self.tree.get_children():          # colour rows by order status
+                status = str(self.tree.item(iid)["values"][4]).lower()
+                self.tree.item(iid, tags=(status,))
             fill_tree(self.items_tree, ["perfume", "quantity", "unit_price", "line_total"], [])
             fill_tree(self.pay_tree, ["payment_id", "amount", "method", "paid_on"], [])
             self.status.config(text=f"{len(rows)} order(s)")
@@ -819,61 +900,48 @@ class OrdersTab(ttk.Frame):
 #  Dashboard
 # =====================================================================
 class DashboardTab(ttk.Frame):
-    CARDS = [
-        ("Perfumes in catalogue", "SELECT COUNT(*) FROM perfume"),
-        ("Bottles in stock", "SELECT COALESCE(SUM(stock_qty), 0) FROM perfume"),
-        ("Customers", "SELECT COUNT(*) FROM customer"),
-        ("Pending orders", "SELECT COUNT(*) FROM sales_order WHERE status = 'Pending'"),
-        ("Revenue collected (Rs)",
-         "SELECT COALESCE(SUM(p.amount), 0) FROM payment p "
-         "JOIN sales_order o ON o.order_id = p.order_id WHERE o.status <> 'Cancelled'"),
-        ("Materials to reorder", "SELECT COUNT(*) FROM v_low_stock_materials"),
-    ]
+    """Home page: recent orders, best sellers and the materials that need restocking.
+    (The headline numbers live in the status line at the top of the window.)"""
 
     def __init__(self, parent, db):
-        super().__init__(parent, padding=10)
+        super().__init__(parent, padding=(6, 4))
         self.db = db
-        row = ttk.Frame(self)
-        row.pack(fill="x")
-        self.values = []
-        for i, (title, _sql) in enumerate(self.CARDS):
-            card = tk.Frame(row, bg="white", highlightbackground=GOLD, highlightthickness=1)
-            card.grid(row=0, column=i, padx=5, sticky="nsew")
-            row.columnconfigure(i, weight=1)
-            big = tk.Label(card, text="-", font=("Segoe UI", 22, "bold"), fg=PLUM, bg="white")
-            big.pack(padx=12, pady=(10, 0))
-            tk.Label(card, text=title, font=("Segoe UI", 9), fg="#666", bg="white").pack(pady=(0, 10))
-            self.values.append(big)
-
         grid = ttk.Frame(self)
-        grid.pack(fill="both", expand=True, pady=12)
-        for c in range(3):
-            grid.columnconfigure(c, weight=1)
+        grid.pack(fill="both", expand=True)
+        grid.columnconfigure(0, weight=3)
+        grid.columnconfigure(1, weight=2)
         grid.rowconfigure(0, weight=1)
+        grid.rowconfigure(1, weight=1)
+
         self.trees = {}
-        for c, (key, title) in enumerate([("low", "Raw materials to reorder"),
-                                          ("recent", "Recent orders"),
-                                          ("top", "Top-selling perfumes")]):
-            lf = ttk.LabelFrame(grid, text=title, padding=6)
-            lf.grid(row=0, column=c, sticky="nsew", padx=4)
-            f, t = make_tree(lf, height=10)
+        layout = [("recent", "Recent orders", 0, 0, 2),
+                  ("top", "Top-selling perfumes", 0, 1, 1),
+                  ("low", "Raw materials to reorder", 1, 1, 1)]
+        for key, title, r, c, span in layout:
+            lf = ttk.LabelFrame(grid, text=title, padding=10)
+            lf.grid(row=r, column=c, rowspan=span, sticky="nsew", padx=6, pady=6)
+            f, t = make_tree(lf, height=8)
             f.pack(fill="both", expand=True)
             self.trees[key] = t
-        ttk.Button(self, text="Refresh", command=self.refresh).pack(anchor="e")
+        for tag, bg, fg in [("pending", "#fff1d6", INK), ("paid", "#e4f1e6", INK),
+                            ("shipped", "#ece2f3", INK), ("cancelled", "#efefef", "#999999")]:
+            self.trees["recent"].tag_configure(tag, background=bg, foreground=fg)
+        ttk.Button(self, text="Refresh", command=self.refresh).pack(anchor="e", padx=6, pady=(4, 0))
 
     def refresh(self):
         try:
-            for lbl, (_t, sql) in zip(self.values, self.CARDS):
-                v = self.db.scalar(sql)
-                lbl.config(text=f"{v:,.2f}" if isinstance(v, Decimal) else f"{v:,}")
-            fill_tree(self.trees["low"], *self.db.fetch(
-                "SELECT material_name, stock_ml, reorder_level FROM v_low_stock_materials"))
-            fill_tree(self.trees["recent"], *self.db.fetch(
-                "SELECT order_id, customer, status, total_amount FROM v_order_summary "
-                "ORDER BY order_id DESC LIMIT 10"))
+            cols, rows = self.db.fetch(
+                "SELECT order_id, customer, order_date, status, total_amount, balance_due "
+                "FROM v_order_summary ORDER BY order_id DESC LIMIT 15")
+            fill_tree(self.trees["recent"], cols, rows)
+            for iid in self.trees["recent"].get_children():
+                status = str(self.trees["recent"].item(iid)["values"][3]).lower()
+                self.trees["recent"].item(iid, tags=(status,))
             fill_tree(self.trees["top"], *self.db.fetch(
                 "SELECT perfume_name, units_sold, revenue FROM v_perfume_sales "
                 "ORDER BY units_sold DESC, revenue DESC LIMIT 10"))
+            fill_tree(self.trees["low"], *self.db.fetch(
+                "SELECT material_name, stock_ml, reorder_level FROM v_low_stock_materials"))
         except Exception as e:
             show_error(e)
 
@@ -1030,37 +1098,60 @@ class ReportsTab(ttk.Frame):
 #  Main application window
 # =====================================================================
 class App(tk.Tk):
+    NAV = [("Dashboard", "Dashboard"), ("Perfumes", "Perfume Collection"), ("Families", "Fragrance Families"),
+           ("Raw Materials", "Ingredients"), ("Suppliers", "Suppliers"), ("Purchases", "Purchases"),
+           ("Production", "Blending & Batches"), ("Customers", "Customers"), ("Orders", "Orders"),
+           ("Employees", "Staff"), ("Reports", "Reports")]
+
+    STATUS_SQL = """
+        SELECT (SELECT COUNT(*) FROM perfume),
+               (SELECT COALESCE(SUM(stock_qty), 0) FROM perfume),
+               (SELECT COUNT(*) FROM sales_order WHERE status = 'Pending'),
+               (SELECT COUNT(*) FROM v_low_stock_materials),
+               (SELECT COALESCE(SUM(p.amount), 0) FROM payment p
+                  JOIN sales_order o ON o.order_id = p.order_id WHERE o.status <> 'Cancelled')"""
+
     def __init__(self):
         super().__init__()
         self.title(APP_TITLE)
         setup_style(self)
+        self.current, self.pages, self.nav_items, self._tick_job = None, {}, {}, None
         self.show_login()
 
     # ---------- login screen
     def show_login(self):
+        if self._tick_job:
+            self.after_cancel(self._tick_job)
+            self._tick_job = None
         for w in self.winfo_children():
             w.destroy()
-        self.geometry("520x470")
+        self.current, self.pages, self.nav_items = None, {}, {}
+        self.minsize(1, 1)
+        self.configure(bg=CREAM)
+        self.geometry("420x520")
         box = ttk.Frame(self, padding=30)
         box.place(relx=0.5, rely=0.5, anchor="center")
-        ttk.Label(box, text="Perfume & Fragrance House", font=("Georgia", 20, "bold"),
-                  foreground=PLUM).grid(row=0, column=0, columnspan=2, pady=(0, 2))
-        ttk.Label(box, text="Management System - connect to PostgreSQL", foreground="#666"
-                  ).grid(row=1, column=0, columnspan=2, pady=(0, 18))
+        cv = tk.Canvas(box, width=120, height=120, bg=CREAM, highlightthickness=0)
+        cv.grid(row=0, column=0, columnspan=2)
+        draw_bottle(cv, 60, 4, 110)
+        ttk.Label(box, text="Aroma House", font=(SERIF, 22, "bold"),
+                  foreground=PLUM).grid(row=1, column=0, columnspan=2, pady=(6, 0))
+        ttk.Label(box, text="Perfume & Fragrance Management", foreground=MUTED
+                  ).grid(row=2, column=0, columnspan=2, pady=(0, 16))
         defaults = [("Host", os.getenv("PGHOST", "localhost")),
                     ("Port", os.getenv("PGPORT", "5432")),
                     ("Database", os.getenv("PGDATABASE", "perfume_house")),
                     ("User", os.getenv("PGUSER", "postgres")),
                     ("Password", os.getenv("PGPASSWORD", ""))]
         self.login_vars = {}
-        for i, (label, val) in enumerate(defaults, start=2):
+        for i, (label, val) in enumerate(defaults, start=3):
             ttk.Label(box, text=label).grid(row=i, column=0, sticky="e", padx=6, pady=5)
             var = tk.StringVar(value=val)
-            e = ttk.Entry(box, textvariable=var, width=28, show="*" if label == "Password" else "")
+            e = ttk.Entry(box, textvariable=var, width=26, show="*" if label == "Password" else "")
             e.grid(row=i, column=1, pady=5)
             e.bind("<Return>", lambda _e: self.connect())
             self.login_vars[label] = var
-        ttk.Button(box, text="Connect", command=self.connect).grid(row=8, column=0, columnspan=2, pady=18)
+        ttk.Button(box, text="Connect", command=self.connect).grid(row=8, column=0, columnspan=2, pady=16)
 
     def connect(self):
         v = {k: x.get().strip() for k, x in self.login_vars.items()}
@@ -1072,28 +1163,69 @@ class App(tk.Tk):
             return
         self.build_main()
 
+    def disconnect(self):
+        try:
+            self.db.conn.close()
+        except Exception:
+            pass
+        self.show_login()
+
+    # ---------- status line in the header (shown on every page)
+    def update_status(self):
+        try:
+            _, rows = self.db.fetch(self.STATUS_SQL)
+            n, stock, pending, low, revenue = rows[0]
+            self.status_lbl.config(
+                text=f"Perfumes: {n}   |   Bottles in stock: {stock}   |   Pending orders: {pending}"
+                     f"   |   Low-stock materials: {low}   |   Revenue: Rs {revenue:,.0f}")
+        except Exception:
+            pass
+
+    def _tick(self):
+        if self.current is None:
+            return
+        self.update_status()
+        self._tick_job = self.after(15000, self._tick)
+
     # ---------- main screen
     def build_main(self):
         for w in self.winfo_children():
             w.destroy()
-        self.geometry("1300x800")
+        self.geometry("1320x800")
         self.minsize(1100, 680)
         db = self.db
 
         header = tk.Frame(self, bg=PLUM)
         header.pack(fill="x")
-        tk.Label(header, text=APP_TITLE, font=("Georgia", 16, "bold"), fg="white", bg=PLUM
-                 ).pack(side="left", padx=14, pady=10)
-        tk.Label(header, text=f"Connected: {db.info}", fg=GOLD, bg=PLUM
-                 ).pack(side="right", padx=14)
+        logo = tk.Canvas(header, width=40, height=52, bg=PLUM, highlightthickness=0)
+        logo.pack(side="left", padx=(14, 6), pady=4)
+        draw_bottle(logo, 20, 4, 44, glass="#a34a6e", liquid=ROSE, line="#fbe8ee")
+        tk.Label(header, text="Aroma House", font=(SERIF, 15, "bold"), fg="white", bg=PLUM).pack(side="left")
+        self.status_lbl = tk.Label(header, text="", font=(SANS, 10), fg="#f8e1e7", bg=PLUM)
+        self.status_lbl.pack(side="right", padx=14)
 
-        self.nb = ttk.Notebook(self)
-        self.nb.pack(fill="both", expand=True, padx=8, pady=8)
+        body = tk.Frame(self, bg=CREAM)
+        body.pack(fill="both", expand=True)
+        side = tk.Frame(body, bg=SIDE, width=210)
+        side.pack(side="left", fill="y")
+        side.pack_propagate(False)
+        ttk.Button(side, text="Log out", command=self.disconnect).pack(side="bottom", pady=(0, 12))
+        tk.Label(side, text=f"Connected to\n{db.info}", font=(SANS, 8), fg="#d9aebb", bg=SIDE,
+                 justify="center").pack(side="bottom", pady=6)
+        tk.Frame(side, bg=SIDE, height=10).pack()
 
-        tabs = [
-            ("Dashboard", DashboardTab(self.nb, db)),
+        main = tk.Frame(body, bg=CREAM)
+        main.pack(side="left", fill="both", expand=True)
+        self.page_title = tk.Label(main, text="", font=(SERIF, 18, "bold"), fg=PLUM, bg=CREAM)
+        self.page_title.pack(anchor="w", padx=24, pady=(18, 4))
+        self.content = ttk.Frame(main)
+        self.content.pack(fill="both", expand=True, padx=18, pady=(4, 12))
+        c = self.content
+
+        pages = [
+            ("Dashboard", DashboardTab(c, db)),
             ("Perfumes", CrudTab(
-                self.nb, db, "perfume", "perfume_id", "SELECT * FROM v_perfume_catalog",
+                c, db, "perfume", "perfume_id", "SELECT * FROM v_perfume_catalog",
                 [dict(col="perfume_name", label="Perfume name", kind="text"),
                  dict(col="family_id", label="Fragrance family", kind="fk",
                       sql="SELECT family_id, family_name FROM fragrance_family ORDER BY 2"),
@@ -1107,12 +1239,12 @@ class App(tk.Tk):
                       required=False, default="today")],
                 extra_buttons=[("Edit Formula (ingredients)", open_formula)])),
             ("Families", CrudTab(
-                self.nb, db, "fragrance_family", "family_id",
+                c, db, "fragrance_family", "family_id",
                 "SELECT * FROM fragrance_family",
                 [dict(col="family_name", label="Family name", kind="text"),
                  dict(col="description", label="Description", kind="text", required=False)])),
             ("Raw Materials", CrudTab(
-                self.nb, db, "raw_material", "material_id",
+                c, db, "raw_material", "material_id",
                 """SELECT m.material_id, m.material_name, m.material_type, m.note_position,
                           m.unit_cost_per_ml, m.stock_ml, m.reorder_level, s.name AS supplier
                    FROM raw_material m LEFT JOIN supplier s ON s.supplier_id = m.supplier_id""",
@@ -1126,7 +1258,7 @@ class App(tk.Tk):
                  dict(col="supplier_id", label="Supplier", kind="fk", required=False,
                       sql="SELECT supplier_id, name FROM supplier ORDER BY 2")])),
             ("Suppliers", CrudTab(
-                self.nb, db, "supplier", "supplier_id", "SELECT * FROM supplier",
+                c, db, "supplier", "supplier_id", "SELECT * FROM supplier",
                 [dict(col="name", label="Supplier name", kind="text"),
                  dict(col="contact_person", label="Contact person", kind="text", required=False),
                  dict(col="phone", label="Phone", kind="text", required=False),
@@ -1134,7 +1266,7 @@ class App(tk.Tk):
                  dict(col="city", label="City", kind="text", required=False),
                  dict(col="country", label="Country", kind="text", default="India")])),
             ("Purchases", CrudTab(
-                self.nb, db, "material_purchase", "purchase_id",
+                c, db, "material_purchase", "purchase_id",
                 """SELECT mp.purchase_id, mp.purchase_date, s.name AS supplier, rm.material_name,
                           mp.quantity_ml, mp.unit_cost_per_ml,
                           mp.quantity_ml * mp.unit_cost_per_ml AS total_cost
@@ -1150,7 +1282,7 @@ class App(tk.Tk):
                  dict(col="purchase_date", label="Purchase date", kind="date", default="today")],
                 order="1 DESC", allow_update=False, allow_delete=False)),
             ("Production", CrudTab(
-                self.nb, db, "production_batch", "batch_id",
+                c, db, "production_batch", "batch_id",
                 """SELECT b.batch_id, p.perfume_name, e.full_name AS perfumer,
                           b.batch_date, b.quantity, b.status
                    FROM production_batch b
@@ -1166,15 +1298,15 @@ class App(tk.Tk):
                       choices=["Planned", "In Progress", "Completed", "Cancelled"])],
                 order="1 DESC", extra_buttons=[("Mark Completed", complete_batch)])),
             ("Customers", CrudTab(
-                self.nb, db, "customer", "customer_id", "SELECT * FROM customer",
+                c, db, "customer", "customer_id", "SELECT * FROM customer",
                 [dict(col="full_name", label="Full name", kind="text"),
                  dict(col="email", label="Email", kind="text"),
                  dict(col="phone", label="Phone", kind="text", required=False),
                  dict(col="city", label="City", kind="text", required=False),
                  dict(col="registered_on", label="Registered on", kind="date", default="today")])),
-            ("Orders", OrdersTab(self.nb, db)),
+            ("Orders", OrdersTab(c, db)),
             ("Employees", CrudTab(
-                self.nb, db, "employee", "employee_id", "SELECT * FROM employee",
+                c, db, "employee", "employee_id", "SELECT * FROM employee",
                 [dict(col="full_name", label="Full name", kind="text"),
                  dict(col="role", label="Role", kind="choice",
                       choices=["Perfumer", "Lab Technician", "Sales Executive", "Manager"]),
@@ -1182,18 +1314,29 @@ class App(tk.Tk):
                  dict(col="phone", label="Phone", kind="text", required=False),
                  dict(col="salary", label="Salary (Rs)", kind="num"),
                  dict(col="hire_date", label="Hire date", kind="date", default="today")])),
-            ("Reports", ReportsTab(self.nb, db)),
+            ("Reports", ReportsTab(c, db)),
         ]
-        for name, widget in tabs:
-            self.nb.add(widget, text=name)
-        self.nb.bind("<<NotebookTabChanged>>", self.on_tab_change)
-        self.on_tab_change()
+        self.pages = dict(pages)
+        for key, label in self.NAV:
+            item = NavButton(side, label, lambda k=key: self.show_page(k))
+            item.pack(fill="x")
+            self.nav_items[key] = item
+        self.show_page("Dashboard")
+        self._tick_job = self.after(15000, self._tick)
 
-    def on_tab_change(self, _e=None):
-        """Reload data whenever a tab is opened so every screen is up to date."""
-        widget = self.nametowidget(self.nb.select())
-        if hasattr(widget, "refresh"):
-            widget.refresh()
+    def show_page(self, key):
+        """Swap the visible page and reload its data so it is always up to date."""
+        if self.current:
+            self.pages[self.current].pack_forget()
+            self.nav_items[self.current].set_active(False)
+        self.current = key
+        self.nav_items[key].set_active(True)
+        self.page_title.config(text=dict(self.NAV)[key])
+        page = self.pages[key]
+        page.pack(fill="both", expand=True)
+        if hasattr(page, "refresh"):
+            page.refresh()
+        self.update_status()
 
 
 if __name__ == "__main__":
