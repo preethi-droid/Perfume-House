@@ -1,15 +1,3 @@
-"""
-Perfume & Fragrance House Management System
--------------------------------------------
-Python (Tkinter GUI) + PostgreSQL (psycopg2)
-
-Run:
-    pip install psycopg2-binary
-    python app.py
-
-Connection defaults can be overridden with the environment variables
-PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD (or typed on the login screen).
-"""
 import os
 import sys
 import tkinter as tk
@@ -30,9 +18,7 @@ SANS = "Segoe UI"
 SERIF = "Georgia"
 
 
-# =====================================================================
 #  Database layer
-# =====================================================================
 class Database:
     """Thin wrapper around a psycopg2 connection."""
 
@@ -105,9 +91,7 @@ def pretty_error(e):
     return str(e)
 
 
-# =====================================================================
 #  UI helpers
-# =====================================================================
 def setup_style(root):
     s = ttk.Style(root)
     s.theme_use("clam")
@@ -222,9 +206,7 @@ def show_error(e):
     messagebox.showerror("Database error", pretty_error(e))
 
 
-# =====================================================================
 #  Generic CRUD tab (used for most master tables)
-# =====================================================================
 class CrudTab(ttk.Frame):
     """
     A reusable Add / Update / Delete / Search screen for one table.
@@ -448,9 +430,7 @@ class CrudTab(ttk.Frame):
         self.say(ok_msg)
 
 
-# =====================================================================
 #  Perfume formula (recipe) dialog
-# =====================================================================
 class FormulaDialog(tk.Toplevel):
     def __init__(self, parent, db, perfume_id, perfume_name, on_done):
         super().__init__(parent)
@@ -601,9 +581,7 @@ def complete_batch(tab):
                    (tab.selected_id,), "Batch completed - stock updated.")
 
 
-# =====================================================================
 #  Orders: new-order dialog, payment dialog, orders tab
-# =====================================================================
 class NewOrderDialog(tk.Toplevel):
     def __init__(self, parent, db, on_done):
         super().__init__(parent)
@@ -896,9 +874,7 @@ class OrdersTab(ttk.Frame):
         self.status.config(text=f"Order #{oid} deleted.")
 
 
-# =====================================================================
 #  Dashboard
-# =====================================================================
 class DashboardTab(ttk.Frame):
     """Home page: recent orders, best sellers and the materials that need restocking.
     (The headline numbers live in the status line at the top of the window.)"""
@@ -946,9 +922,7 @@ class DashboardTab(ttk.Frame):
             show_error(e)
 
 
-# =====================================================================
 #  Reports / SQL query showcase
-# =====================================================================
 REPORTS = [
     ("1. Perfumes priced above Rs 5000   [WHERE, ORDER BY]",
      """SELECT perfume_name, concentration, target_gender, selling_price
@@ -1094,9 +1068,7 @@ class ReportsTab(ttk.Frame):
             self.run()
 
 
-# =====================================================================
 #  Main application window
-# =====================================================================
 class App(tk.Tk):
     NAV = [("Dashboard", "Dashboard"), ("Perfumes", "Perfume Collection"), ("Families", "Fragrance Families"),
            ("Raw Materials", "Ingredients"), ("Suppliers", "Suppliers"), ("Purchases", "Purchases"),

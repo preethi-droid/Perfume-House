@@ -1,24 +1,15 @@
--- =====================================================================
---  PERFUME & FRAGRANCE HOUSE MANAGEMENT SYSTEM  --  schema.sql
---  PostgreSQL
---
 --  HOW TO RUN
 --    1.  createdb -U postgres perfume_house
 --    2.  psql -U postgres -d perfume_house -f schema.sql
 --  (The script is re-runnable: it drops and recreates everything.)
--- =====================================================================
 
--- ---------------------------------------------------------------------
 -- 0. CLEAN-UP
--- ---------------------------------------------------------------------
 DROP VIEW  IF EXISTS v_perfume_catalog, v_order_summary, v_low_stock_materials, v_perfume_sales CASCADE;
 DROP TABLE IF EXISTS payment, order_item, sales_order, customer,
                      material_purchase, production_batch, perfume_ingredient,
                      perfume, raw_material, employee, fragrance_family, supplier CASCADE;
 
--- ---------------------------------------------------------------------
 -- 1. TABLES
--- ---------------------------------------------------------------------
 
 CREATE TABLE supplier (
     supplier_id     SERIAL PRIMARY KEY,
@@ -134,9 +125,7 @@ CREATE TABLE payment (
     paid_on     TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- ---------------------------------------------------------------------
 -- 2. INDEXES (on foreign keys / frequently searched columns)
--- ---------------------------------------------------------------------
 CREATE INDEX idx_material_supplier ON raw_material(supplier_id);
 CREATE INDEX idx_perfume_family    ON perfume(family_id);
 CREATE INDEX idx_batch_perfume     ON production_batch(perfume_id);
@@ -145,9 +134,7 @@ CREATE INDEX idx_order_date        ON sales_order(order_date);
 CREATE INDEX idx_item_perfume      ON order_item(perfume_id);
 CREATE INDEX idx_payment_order     ON payment(order_id);
 
--- ---------------------------------------------------------------------
 -- 3. VIEWS
--- ---------------------------------------------------------------------
 
 -- Perfume catalogue with ingredient cost and profit margin per bottle
 CREATE VIEW v_perfume_catalog AS
@@ -207,9 +194,7 @@ LEFT JOIN (SELECT oi.perfume_id, oi.quantity, oi.unit_price
            WHERE o.status <> 'Cancelled') x ON x.perfume_id = p.perfume_id
 GROUP BY p.perfume_id, p.perfume_name;
 
--- ---------------------------------------------------------------------
 -- 4. TRIGGERS  (business rules enforced inside the database)
--- ---------------------------------------------------------------------
 
 -- 4.1  Order item: default the unit price from the perfume's current price
 CREATE OR REPLACE FUNCTION fn_order_item_before() RETURNS trigger AS $$
@@ -406,10 +391,8 @@ CREATE TRIGGER trg_batch_complete
 AFTER INSERT OR UPDATE OF status ON production_batch
 FOR EACH ROW EXECUTE FUNCTION fn_batch_complete();
 
--- ---------------------------------------------------------------------
 -- 5. SAMPLE DATA
 --    (order matters: triggers update stock / totals as rows are inserted)
--- ---------------------------------------------------------------------
 
 INSERT INTO supplier (name, contact_person, phone, email, city, country) VALUES
 ('Grasse Aromatics',            'Claire Dubois',      '+33-493-555-0101',  'sales@grasse-aromatics.fr', 'Grasse',    'France'),
@@ -538,10 +521,3 @@ UPDATE sales_order SET status = 'Cancelled' WHERE order_id = 7;
 INSERT INTO customer (full_name, email, city) VALUES ('Test Customer', 'test@example.com', 'Madurai');
 UPDATE customer SET city = 'Trichy' WHERE email = 'test@example.com';
 DELETE FROM customer WHERE email = 'test@example.com';
-
--- ---------------------------------------------------------------------
--- 6. QUICK SANITY CHECKS
--- ---------------------------------------------------------------------
--- SELECT * FROM v_perfume_catalog;
--- SELECT * FROM v_order_summary;
--- SELECT * FROM v_low_stock_materials;
